@@ -1,0 +1,48 @@
+version: 2
+aliases:
+- &build_and_run
+  machine:
+    image: ubuntu-1604:201903-01
+  steps:
+  - checkout
+  - run: if test -n "$ca" ; then sudo apt-get install -y libnss3-tools ; fi
+  - run: tests/run-partial-tests.sh Dockerfile.$dockerfile
+  - run: docker ps -aq | while read i ; do docker rm -f $i ; done
+  - run: docker build -t local/freeipa-server -f Dockerfile.$dockerfile .
+  - run: tests/run-master-and-replica.sh local/freeipa-server
+
+jobs:
+  "fedora-30":
+    environment:
+      dockerfile: fedora-30
+      readonly: --read-only
+    <<: *build_and_run
+  "fedora-30-external-ca":
+    environment:
+      dockerfile: fedora-30
+      ca: --external-ca
+      readonly: --read-only
+    <<: *build_and_run
+  "fedora-29":
+    environment:
+      dockerfile: fedora-29
+    <<: *build_and_run
+  "centos-7":
+    environment:
+      dockerfile: centos-7
+    <<: *build_and_run
+  "centos-7-external-ca":
+    environment:
+      dockerfile: centos-7
+      ca: --external-ca
+    <<: *build_and_run
+
+workflows:
+  version: 2
+  build:
+    jobs:
+      - "fedora-30"
+      - "fedora-30-external-ca"
+      - "fedora-29"
+      - "centos-7"
+      - "centos-7-external-ca"

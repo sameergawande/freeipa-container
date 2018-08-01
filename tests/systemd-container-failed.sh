@@ -25,7 +25,7 @@ done
 
 diff <( for i in "$@" ; do
 		if ! [ "$i" == "${i#TRAVIS:}" ] ; then
-			if [ -n "$TRAVIS" ] ; then
+			if [ -n "$TRAVIS$CIRCLECI" ] ; then
 				echo "${i#TRAVIS:}"
 			fi
 		else
