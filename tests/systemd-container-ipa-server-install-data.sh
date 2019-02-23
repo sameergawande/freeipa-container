@@ -1,7 +1,7 @@
 #!/bin/bash
 
-set -e
-# set -x
+# set -e
+set -x
 
 C="$1"
 D="$2"
@@ -25,6 +25,8 @@ fi
 $docker exec $C bash -c 'echo Secret123 | kinit admin'
 $docker exec $C ipa user-add --first Bob --last Nowak bob
 $docker exec $C id bob
+$docker -v
+$docker logs $C
 
 MACHINE_ID=$( $docker exec $C cat /etc/machine-id )
 $docker exec $C ls -la /data/var/log/journal/$MACHINE_ID/system.journal /data/var/log/ipaserver-install.log
