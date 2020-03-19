@@ -7,6 +7,8 @@ services:
 
 before_install:
 - if test -n "$ca" ; then sudo apt-get install -y libnss3-tools ; fi
+- export docker=${docker:-docker}
+- if test "$docker" == podman ; then sudo add-apt-repository -y ppa:projectatomic/ppa && sudo apt-get update -y && sudo apt-get install -y podman ; fi
 
 install: true
 
@@ -22,57 +24,17 @@ before_script:
 - perl -e 'print map "$_=$ENV{$_}".chr(10), sort keys %ENV'
 
 stages:
-- sanity
 - build
 
 matrix:
   include:
-    - stage: sanity
-      script: if comm -23 <( echo "$FILES_CHANGED" ) <( echo "$TRAVIS_DOCKERFILES" ) | grep Dockerfile. ; then echo "Dockerfile modified but not tracked by Travis." >&2 ; exit 1 ; else echo "No unexpected Dockerfile changes, OK." ; fi
     - stage: build
-      env: dockerfile=fedora-31 readonly=--read-only
-    - stage: build
-      env: dockerfile=fedora-31 ca=--external-ca readonly=--read-only
-    - stage: build
-      env: dockerfile=fedora-31
-    - stage: build
-      env: dockerfile=fedora-30
-    - stage: build
-      env: dockerfile=centos-8 readonly=--read-only
-    - stage: build
-      env: dockerfile=centos-8 ca=--external-ca readonly=--read-only
-    - stage: build
-      env: dockerfile=centos-8
-    - stage: build
-      env: dockerfile=centos-7
-    - stage: build
-      env: dockerfile=fedora-23 replica=none seccomp=unconfined readonly=--read-only
-  exclude:
-    - stage: build
-      env: dockerfile=rhel-7
-    - stage: build
-      env: dockerfile=rhel-8
-    - stage: build
-      env: dockerfile=fedora-32 replica=none
-    - stage: build
-      env: dockerfile=fedora-rawhide replica=none
-    - stage: build
-      env: dockerfile=fedora-29
-    - stage: build
-      env: dockerfile=fedora-28
-    - stage: build
-      env: dockerfile=fedora-27
-    - stage: build
-      env: dockerfile=fedora-26 replica=none
-    - stage: build
-      env: dockerfile=fedora-25 seccomp=unconfined
-    - stage: build
-      env: dockerfile=fedora-24 replica=none seccomp=unconfined
+      env: dockerfile=fedora-31 docker=podman replica=none
 
 script:
-- if test -n "$RUN_DOCKER_BUILD" ; then docker build -t local/freeipa-server -f Dockerfile.$dockerfile . ; fi
+- if test -n "$RUN_DOCKER_BUILD" ; then $docker build -t local/freeipa-server -f Dockerfile.$dockerfile . ; fi
 - if test -n "$RUN_DOCKER_BUILD" ; then tests/run-master-and-replica.sh local/freeipa-server ; fi
 
 after_failure:
-- docker ps -aq | while read i ; do docker rm -f $i ; done
+- $docker ps -aq | while read i ; do $docker rm -f $i ; done
 - if test -n "$RUN_DOCKER_BUILD" ; then tests/run-partial-tests.sh Dockerfile.$dockerfile ; fi
